@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Observation
 
 struct CounterState: Equatable {
     var count: Int = 0
@@ -18,7 +19,6 @@ enum CounterAction: Equatable {
     case reset
 }
 
-// Updated Effect and Reducer type definitions for async/await
 typealias Effect<Action> = () async -> Action?
 typealias Reducer<State, Action, Environment> = (inout State, Action, Environment) -> Effect<Action>?
 
@@ -31,12 +31,13 @@ let counterReducer: Reducer<CounterState, CounterAction, Void> = { state, action
     case .reset:
         state.count = 0
     }
-    return nil // No asynchronous side effects here
+    return nil
 }
 
+@Observable
 @MainActor
-final class Store<State, Action, Environment>: ObservableObject {
-    @Published private(set) var state: State
+final class Store<State, Action, Environment> {
+    private(set) var state: State
     private let reducer: Reducer<State, Action, Environment>
     private let environment: Environment
     
@@ -63,7 +64,7 @@ final class Store<State, Action, Environment>: ObservableObject {
 }
 
 struct CounterView: View {
-    @ObservedObject var store: Store<CounterState, CounterAction, Void>
+    let store: Store<CounterState, CounterAction, Void>
     
     var body: some View {
         VStack(spacing: 20) {
