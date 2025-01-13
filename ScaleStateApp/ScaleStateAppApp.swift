@@ -10,14 +10,19 @@ import SwiftData
 
 @main
 struct ScaleStateAppApp: App {
-    let store = Store(
+    // Create the live API service
+    let apiService = LiveCounterAPIService()
+    
+    var body: some Scene {
+        
+        let environment = CounterEnvironment(apiService: apiService)
+        
+        let store = Store(
             initialState: CounterState(),
             reducer: counterReducer,
-            environment: ()
+            environment: environment
         )
-
-
-    var body: some Scene {
+        
         WindowGroup {
             CounterView(store: store)
         }
