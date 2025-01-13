@@ -10,23 +10,16 @@ import SwiftData
 
 @main
 struct ScaleStateAppApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+    let store = Store(
+            initialState: CounterState(),
+            reducer: counterReducer,
+            environment: ()
+        )
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CounterView(store: store)
         }
-        .modelContainer(sharedModelContainer)
     }
 }

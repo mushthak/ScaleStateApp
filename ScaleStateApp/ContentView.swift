@@ -8,54 +8,97 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+struct CounterState: Equatable {
+    var count: Int = 0
+}
 
-    var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
-        }
+enum CounterAction: Equatable {
+    case increment
+    case decrement
+    case reset
+}
+
+// Updated Effect and Reducer type definitions for async/await
+typealias Effect<Action> = () async -> Action?
+typealias Reducer<State, Action, Environment> = (inout State, Action, Environment) -> Effect<Action>?
+
+let counterReducer: Reducer<CounterState, CounterAction, Void> = { state, action, _ in
+    switch action {
+    case .increment:
+        state.count += 1
+    case .decrement:
+        state.count -= 1
+    case .reset:
+        state.count = 0
     }
+    return nil // No asynchronous side effects here
+}
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
+@MainActor
+final class Store<State, Action, Environment>: ObservableObject {
+    @Published private(set) var state: State
+    private let reducer: Reducer<State, Action, Environment>
+    private let environment: Environment
+    
+    init(
+        initialState: State,
+        reducer: @escaping Reducer<State, Action, Environment>,
+        environment: Environment
+    ) {
+        self.state = initialState
+        self.reducer = reducer
+        self.environment = environment
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    
+    func send(_ action: Action) async {
+        if let effect = reducer(&state, action, environment) {
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if let nextAction = await effect() {
+                    await self.send(nextAction)
+                }
             }
         }
     }
 }
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+struct CounterView: View {
+    @ObservedObject var store: Store<CounterState, CounterAction, Void>
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Count: \(store.state.count)")
+                .font(.largeTitle)
+            
+            HStack {
+                Button("Decrement") {
+                    Task {
+                        await store.send(.decrement)
+                    }
+                }
+                .padding()
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(8)
+                
+                Button("Increment") {
+                    Task {
+                        await store.send(.increment)
+                    }
+                }
+                .padding()
+                .background(Color.green.opacity(0.2))
+                .cornerRadius(8)
+            }
+            
+            Button("Reset") {
+                Task {
+                    await store.send(.reset)
+                }
+            }
+            .padding()
+            .background(Color.blue.opacity(0.2))
+            .cornerRadius(8)
+        }
+        .padding()
+    }
 }
