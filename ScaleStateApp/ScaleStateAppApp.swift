@@ -10,7 +10,7 @@ import SwiftData
 
 @main
 struct ScaleStateAppApp: App {
-    // Create the live API service
+
     let apiService = LiveCounterAPIService()
     
     var body: some Scene {
