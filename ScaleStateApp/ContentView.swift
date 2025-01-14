@@ -10,7 +10,7 @@ import SwiftData
 import Observation
 
 // API Service
-protocol CounterAPIService {
+protocol CounterAPIService: Sendable {
     func sendCounterAction(_ action: CounterAction, currentCount: Int) async throws
 }
 
@@ -50,13 +50,14 @@ enum CounterError: Error {
     case apiError
 }
 
+@MainActor
 struct CounterState: Equatable {
     var count: Int = 0
     var isLoading: Bool = false
     var error: String?
 }
 
-enum CounterAction: Equatable {
+enum CounterAction: Equatable, Sendable {
     case increment
     case decrement
     case reset
@@ -75,68 +76,63 @@ enum CounterAction: Equatable {
 }
 
 // Environment to hold dependencies
-struct CounterEnvironment {
+struct CounterEnvironment : Sendable{
     let apiService: CounterAPIService
 }
 
-typealias Effect<Action> = () async -> Action?
-typealias Reducer<State, Action, Environment> = (inout State, Action, Environment) -> Effect<Action>?
+//typealias Effect<Action> = () async -> Action?
+typealias Reducer<State, Action, Environment> = (State, Action, Environment) async -> (Action?, State)
 
-let counterReducer: Reducer<CounterState, CounterAction, CounterEnvironment> = { state, action, environment in
+@MainActor let counterReducer: Reducer<CounterState, CounterAction, CounterEnvironment> = { state, action, environment in
+    var newState = state
     switch action {
     case .increment:
-        state.count += 1
-        state.error = nil
+        newState.count += 1
+        newState.error = nil
         let currentCount = state.count
-        return { @MainActor in
-            do {
-                try await environment.apiService.sendCounterAction(.increment, currentCount: currentCount)
-                return .setLoading(false)
-            } catch {
-                return .setError("Failed to send increment action to server")
-            }
+        do {
+            try await environment.apiService.sendCounterAction(.increment, currentCount: currentCount)
+            return (.setLoading(false), newState)
+        } catch {
+            return (.setError("Failed to send increment action to server"), newState)
         }
         
     case .decrement:
-        state.count -= 1
-        state.error = nil
+        newState.count -= 1
+        newState.error = nil
         let currentCount = state.count
-        return { @MainActor in
-            do {
-                try await environment.apiService.sendCounterAction(.decrement, currentCount: currentCount)
-                return .setLoading(false)
-            } catch {
-                return .setError("Failed to send decrement action to server")
-            }
+        do {
+            try await environment.apiService.sendCounterAction(.decrement, currentCount: currentCount)
+            return (.setLoading(false), newState)
+        } catch {
+            return (.setError("Failed to send decrement action to server"), newState)
         }
         
     case .reset:
-        state.count = 0
-        state.error = nil
+        newState.count = 0
+        newState.error = nil
         let currentCount = state.count
-        return { @MainActor in
-            do {
-                try await environment.apiService.sendCounterAction(.reset, currentCount: currentCount)
-                return .setLoading(false)
-            } catch {
-                return .setError("Failed to send reset action to server")
-            }
+        do {
+            try await environment.apiService.sendCounterAction(.reset, currentCount: currentCount)
+            return (.setLoading(false), newState)
+        } catch {
+            return (.setError("Failed to send reset action to server"), newState)
         }
         
     case .setLoading(let isLoading):
-        state.isLoading = isLoading
-        return nil
+        newState.isLoading = isLoading
+        return (nil, newState)
         
     case .setError(let error):
-        state.error = error
-        state.isLoading = false
-        return nil
+        newState.error = error
+        newState.isLoading = false
+        return (nil, newState)
     }
 }
 
 @Observable
 @MainActor
-final class Store<State, Action, Environment> {
+final class Store<State: Sendable, Action: Sendable, Environment: Sendable> {
     private(set) var state: State
     private let reducer: Reducer<State, Action, Environment>
     private let environment: Environment
@@ -152,13 +148,12 @@ final class Store<State, Action, Environment> {
     }
     
     func send(_ action: Action) async {
-        if let effect = reducer(&state, action, environment) {
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                if let nextAction = await effect() {
-                    await self.send(nextAction)
-                }
-            }
+        
+        let (nextAction, newState) = await reducer(state, action, environment)
+        
+        self.state = newState
+        if nextAction != nil {
+            await send(nextAction!)
         }
     }
 }
