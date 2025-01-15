@@ -33,9 +33,8 @@ struct CounterEnvironment: Sendable {
     case .increment:
         newState.count += 1
         newState.error = nil
-        let currentCount = state.count
         do {
-            try await environment.apiService.sendCounter(currentCount: currentCount)
+            try await environment.apiService.sendCounter(currentCount: newState.count)
             return (.setLoading(false), newState)
         } catch {
             return (.setError("Failed to send increment action to server"), newState)
@@ -44,9 +43,8 @@ struct CounterEnvironment: Sendable {
     case .decrement:
         newState.count -= 1
         newState.error = nil
-        let currentCount = state.count
         do {
-            try await environment.apiService.sendCounter(currentCount: currentCount)
+            try await environment.apiService.sendCounter(currentCount: newState.count)
             return (.setLoading(false), newState)
         } catch {
             return (.setError("Failed to send decrement action to server"), newState)
@@ -55,9 +53,8 @@ struct CounterEnvironment: Sendable {
     case .reset:
         newState.count = 0
         newState.error = nil
-        let currentCount = state.count
         do {
-            try await environment.apiService.sendCounter(currentCount: currentCount)
+            try await environment.apiService.sendCounter(currentCount: newState.count)
             return (.setLoading(false), newState)
         } catch {
             return (.setError("Failed to send reset action to server"), newState)
