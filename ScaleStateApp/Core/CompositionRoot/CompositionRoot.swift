@@ -25,7 +25,7 @@ struct CompositionRoot {
     }
     
     // MARK: - View Factories
-    @MainActor func makeCounterView() -> some View {
+    func makeCounterView() -> some View {
         return CounterView(store: counterStore) { count in
             router.navigate(to: .countHighlight(count: count))
         }
