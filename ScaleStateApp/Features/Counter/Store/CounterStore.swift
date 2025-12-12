@@ -14,11 +14,12 @@ struct CounterState: Equatable {
 }
 
 enum CounterAction: Equatable {
+    //View Actions
     case increment
     case decrement
-    case reset
-    case setLoading(Bool)
-    case setError(String?)
+    
+    //Internal Actions
+    case _sendCounter(currentCount: Int)
 }
 
 struct CounterEnvironment {
@@ -32,40 +33,24 @@ let counterReducer: Reducer<CounterState, CounterAction, CounterEnvironment> = {
     case .increment:
         newState.count += 1
         newState.error = nil
-        do {
-            try await environment.apiService.sendCounter(currentCount: newState.count)
-            return (.setLoading(false), newState)
-        } catch {
-            return (.setError("Failed to send increment action to server"), newState)
-        }
+        newState.isLoading = true
+        return (._sendCounter(currentCount: newState.count), newState)
         
     case .decrement:
         newState.count -= 1
         newState.error = nil
+        newState.isLoading = true
+        return (._sendCounter(currentCount: newState.count), newState)
+        
+    case ._sendCounter(currentCount: let count):
         do {
             try await environment.apiService.sendCounter(currentCount: newState.count)
-            return (.setLoading(false), newState)
+            newState.isLoading = true
+            return (nil, newState)
         } catch {
-            return (.setError("Failed to send decrement action to server"), newState)
+            newState.error = "Failed to send action to server"
+            newState.isLoading = false
+            return (nil, newState)
         }
-        
-    case .reset:
-        newState.count = 0
-        newState.error = nil
-        do {
-            try await environment.apiService.sendCounter(currentCount: newState.count)
-            return (.setLoading(false), newState)
-        } catch {
-            return (.setError("Failed to send reset action to server"), newState)
-        }
-        
-    case .setLoading(let isLoading):
-        newState.isLoading = isLoading
-        return (nil, newState)
-        
-    case .setError(let error):
-        newState.error = error
-        newState.isLoading = false
-        return (nil, newState)
     }
 }

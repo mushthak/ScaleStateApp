@@ -12,7 +12,6 @@ struct CounterView: View {
             HStack(spacing: 20) {
                 Button("-") {
                     Task {
-                        await store.send(.setLoading(true))
                         await store.send(.decrement)
                     }
                 }
@@ -21,7 +20,6 @@ struct CounterView: View {
                 
                 Button("+") {
                     Task {
-                        await store.send(.setLoading(true))
                         await store.send(.increment)
                     }
                 }
