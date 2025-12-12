@@ -2,7 +2,6 @@ import Foundation
 import Observation
 
 @Observable
-@MainActor
 final class Store<State: Sendable, Action: Sendable, Environment: Sendable> {
     private(set) var state: State
     private let reducer: Reducer<State, Action, Environment>

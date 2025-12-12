@@ -7,14 +7,13 @@
 
 typealias CounterStore = Store<CounterState, CounterAction, CounterEnvironment>
 
-@MainActor
 struct CounterState: Equatable {
     var count: Int = 0
     var isLoading: Bool = false
     var error: String?
 }
 
-enum CounterAction: Equatable, Sendable {
+enum CounterAction: Equatable {
     case increment
     case decrement
     case reset
@@ -22,12 +21,12 @@ enum CounterAction: Equatable, Sendable {
     case setError(String?)
 }
 
-struct CounterEnvironment: Sendable {
+struct CounterEnvironment {
     let apiService: CounterAPIService
 }
 
 
-@MainActor let counterReducer: Reducer<CounterState, CounterAction, CounterEnvironment> = { state, action, environment in
+let counterReducer: Reducer<CounterState, CounterAction, CounterEnvironment> = { state, action, environment in
     var newState = state
     switch action {
     case .increment:

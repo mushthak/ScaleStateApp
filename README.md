@@ -6,10 +6,11 @@ A SwiftUI application demonstrating a scalable state management architecture usi
 
 - **Pure Swift Implementation**: No third-party dependencies - built entirely with native Swift and SwiftUI
 - **Modern Swift Features**: Leverages latest Swift 6 features including:
+  - Approchable concurrency
   - Strict concurrency checking
   - Actor-based isolation for thread safety
   - Observation framework and macros
-  - @MainActor annotations
+  - Default actor isolation as @MainActor
   - async/await
 - **Thread Safety**: Implements strict concurrency checks to prevent data races
 - **Zero Dependencies**: Complete control over the codebase with no external dependencies

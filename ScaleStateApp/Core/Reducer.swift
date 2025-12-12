@@ -6,4 +6,4 @@
 //
 
 
-typealias Reducer<State, Action, Environment> =  @Sendable (State, Action, Environment) async -> (Action?, State) 
+typealias Reducer<State, Action, Environment> = (State, Action, Environment) async -> (Action?, State) 

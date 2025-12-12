@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-@MainActor
 struct CompositionRoot {
     
     // MARK: - Services
@@ -36,7 +35,7 @@ struct CompositionRoot {
     }
     
     // MARK: - Root View
-    @MainActor @ViewBuilder
+    @ViewBuilder
     func makeRootView() -> some View {
         NavigationStack(path: .init(get: { router.path }, set: { router.path = $0 })) {
             makeCounterView()
